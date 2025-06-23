@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Catch the Pokémon!</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Comic Sans MS', 'Comic Neue', sans-serif;
+      background: linear-gradient(45deg, #f1f1f1, #e1ecff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    h1 {
+      margin-top: 20px;
+      color: #ff1a1a;
+      text-shadow: 2px 2px #fff;
+    }
+    #score-board {
+      margin: 10px;
+      font-size: 1.5rem;
+    }
+    #controls {
+      margin: 10px;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #game-switch {
+      margin: 10px;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #balloon-area {
+      position: relative;
+      width: 90vmin;
+      height: 60vmin;
+      background: linear-gradient(to top, #a0e9ff, #fff 60%);
+      border: 5px solid #000;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .balloon {
+      position: absolute;
+      width: 50px;
+      height: 70px;
+      border-radius: 50% 50% 50% 50%/60% 60% 40% 40%;
+      cursor: pointer;
+      transition: transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .balloon:hover {
+      transform: scale(1.1);
+    }
+    #game-area {
+      position: relative;
+      width: 90vmin;
+      height: 60vmin;
+      background: #fff;
+      border: 5px solid #000;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .pokemon {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .pokemon:hover {
+      transform: scale(1.2);
+    }
+    #start-btn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 1.2rem;
+      background: #ffcc00;
+      border: 3px solid #000;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #start-btn:hover {
+      background: #ffe066;
+    }
+    #whack-area {
+      position: relative;
+      width: 90vmin;
+      height: 60vmin;
+      background: #d2b48c;
+      border: 5px solid #000;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .diglett {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .diglett:hover {
+      transform: scale(1.1);
+    }
+    #pac-canvas {
+      background: #000;
+      border: 5px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mini-Arcade!</h1>
+
+  <!-- Game Switch Slider -->
+  <div id="game-switch">
+    <label for="game-selector">Choose Game: <span id="game-label">Pokémon</span></label>
+    <input type="range" id="game-selector" min="1" max="4" value="1">
+  </div>
+
+  <!-- Pokémon Catch Game -->
+  <div id="pokemon-game">
+    <div id="score-board">Time: <span id="time">30</span>s | Score: <span id="score">0</span> | Accuracy: <span id="accuracy">0</span>%</div>
+    <div id="controls">
+      <label for="difficulty">Difficulty: <span id="diff-label">3</span></label>
+      <input type="range" id="difficulty" min="1" max="5" value="3">
+    </div>
+    <div id="game-area"></div>
+    <button id="start-btn">Start Pokémon Game</button>
+  </div>
+
+  <!-- Balloon Pop Game -->
+  <div id="balloon-game" style="display:none;">
+    <div id="balloon-score-board">Time: <span id="time2">30</span>s | Score: <span id="score2">0</span></div>
+    <div id="balloon-area"></div>
+    <button id="balloon-start-btn">Start Balloon Game</button>
+  </div>
+
+  <!-- Whack-a-Diglett Game -->
+  <div id="whack-game" style="display:none;">
+    <div id="whack-score-board">Time: <span id="time3">30</span>s | Score: <span id="score3">0</span></div>
+    <div id="whack-area"></div>
+    <button id="whack-start-btn">Start Whack Game</button>
+  </div>
+
+  <!-- Pac-Pika Game -->
+  <div id="pac-game" style="display:none;">
+    <div id="pac-score-board">Time: <span id="time4">60</span>s | Score: <span id="score4">0</span></div>
+    <canvas id="pac-canvas" width="400" height="400"></canvas>
+    <button id="pac-start-btn">Start Pac-Pika</button>
+  </div>
+
+  <script>
+    const gameArea = document.getElementById('game-area');
+    const scoreSpan = document.getElementById('score');
+    const timeSpan = document.getElementById('time');
+    const startBtn = document.getElementById('start-btn');
+    const accuracySpan = document.getElementById('accuracy');
+    const diffSlider = document.getElementById('difficulty');
+    const diffLabel = document.getElementById('diff-label');
+    const balloonArea = document.getElementById('balloon-area');
+    const scoreSpan2 = document.getElementById('score2');
+    const timeSpan2 = document.getElementById('time2');
+    const balloonStartBtn = document.getElementById('balloon-start-btn');
+    const gameSelector = document.getElementById('game-selector');
+    const gameLabel = document.getElementById('game-label');
+    const pokemonGameDiv = document.getElementById('pokemon-game');
+    const balloonGameDiv = document.getElementById('balloon-game');
+    const whackGameDiv = document.getElementById('whack-game');
+    const pacGameDiv = document.getElementById('pac-game');
+    const whackStartBtn = document.getElementById('whack-start-btn');
+
+    // Some popular Pokémon IDs
+    const pokemonList = [1, 4, 7, 25, 39, 52, 54, 58, 63, 133];
+
+    let score = 0;
+    let timeLeft = 30;
+    let gameInterval;
+    let spawnInterval;
+    let totalSpawned = 0;
+    let currentDifficulty = 3;
+    let currentGame = 1; // 1 = Pokemon, 2 = Balloon, 3 = Whack, 4 = Pac
+    let score2 = 0;
+    let timeLeft2 = 30;
+    let spawnInterval2;
+    let gameInterval2;
+    let score3 = 0;
+    let timeLeft3 = 30;
+    let spawnInterval3;
+    let gameInterval3;
+
+    // Pac game vars
+    const GRID_SIZE = 20;
+    const CELL = 20; // pixels
+    let pacX = 10;
+    let pacY = 10;
+    let dots = [];
+    let pacScore = 0;
+    let pacTimeLeft = 60;
+    let pacLoop;
+    let pacTimer;
+    let pacRunning = false;
+
+    const POKEBALL_SRC = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png';
+    const DIGLETT_SRC = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/50.png';
+    const randomColor = () => `hsl(${Math.floor(Math.random()*360)}, 80%, 60%)`;
+
+    function randomPosition () {
+      const x = Math.random() * (gameArea.clientWidth - 60);
+      const y = Math.random() * (gameArea.clientHeight - 60);
+      return { x, y };
+    }
+
+    function spawnPokemon () {
+      const pokeId = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+      const img = document.createElement('img');
+      img.classList.add('pokemon');
+
+      const { x, y } = randomPosition();
+      img.style.left = x + 'px';
+      img.style.top = y + 'px';
+
+      let pokemonVisible = false;
+
+      const showPokemon = () => {
+        pokemonVisible = true;
+        img.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokeId}.png`;
+
+        // Increment spawned count and accuracy only when Pokémon appears
+        totalSpawned++;
+        updateAccuracy();
+
+        // Remove after 1.2 seconds if not clicked
+        setTimeout(() => {
+          if (gameArea.contains(img)) {
+            gameArea.removeChild(img);
+          }
+        }, 1200);
+      };
+
+      // Click handler
+      img.addEventListener('click', () => {
+        if (!pokemonVisible) return; // Ignore clicks before Pokémon shows
+        score++;
+        scoreSpan.textContent = score;
+        gameArea.removeChild(img);
+        updateAccuracy();
+      });
+
+      // Decide initial sprite based on difficulty
+      if (currentDifficulty <= 2) {
+        img.src = POKEBALL_SRC;
+        // Show Pokémon after small delay (easier)
+        setTimeout(showPokemon, 400);
+      } else {
+        showPokemon();
+      }
+
+      gameArea.appendChild(img);
+    }
+
+    function updateAccuracy () {
+      const accuracy = totalSpawned ? Math.round((score / totalSpawned) * 100) : 0;
+      accuracySpan.textContent = accuracy;
+    }
+
+    function startGame () {
+      // Reset
+      score = 0;
+      timeLeft = 30;
+      scoreSpan.textContent = score;
+      timeSpan.textContent = timeLeft;
+      totalSpawned = 0;
+      accuracySpan.textContent = 0;
+      startBtn.disabled = true;
+
+      // Clear area in case of restart
+      gameArea.innerHTML = '';
+
+      // Start countdown
+      gameInterval = setInterval(() => {
+        timeLeft--;
+        timeSpan.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          endGame();
+          showPokemonResults();
+        }
+      }, 1000);
+
+      // Spawn Pokémon every 700 ms
+      currentDifficulty = parseInt(diffSlider.value, 10);
+      const spawnRate = Math.max(150, 1000 / currentDifficulty);
+      spawnInterval = setInterval(spawnPokemon, spawnRate);
+    }
+
+    function endGame () {
+      clearInterval(gameInterval);
+      clearInterval(spawnInterval);
+      startBtn.disabled = false;
+    }
+
+    function showPokemonResults () {
+      const finalAccuracy = totalSpawned ? Math.round((score / totalSpawned) * 100) : 0;
+      alert(`Time's up! You caught ${score} Pokémon with ${finalAccuracy}% accuracy!`);
+    }
+
+    function randomX () {
+      return Math.random() * (balloonArea.clientWidth - 50);
+    }
+
+    function spawnBalloon () {
+      const balloon = document.createElement('div');
+      balloon.classList.add('balloon');
+      balloon.style.background = randomColor();
+      balloon.style.left = randomX() + 'px';
+      balloon.style.top = balloonArea.clientHeight + 'px';
+
+      balloon.addEventListener('click', () => {
+        score2++;
+        scoreSpan2.textContent = score2;
+        balloonArea.removeChild(balloon);
+      });
+
+      // Add Pokémon face
+      const face = document.createElement('img');
+      const faceId = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+      face.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${faceId}.png`;
+      face.style.width = '40px';
+      face.style.height = '40px';
+      face.style.pointerEvents = 'none';
+      balloon.appendChild(face);
+
+      balloonArea.appendChild(balloon);
+
+      // Animate upward
+      requestAnimationFrame(() => {
+        balloon.style.transition = 'top 3s linear';
+        balloon.style.top = '-80px';
+      });
+
+      // Remove balloon after 3.1s if not clicked
+      setTimeout(() => {
+        if (balloonArea.contains(balloon)) {
+          balloonArea.removeChild(balloon);
+        }
+      }, 3100);
+    }
+
+    function startBalloonGame () {
+      // Reset
+      score2 = 0;
+      timeLeft2 = 30;
+      scoreSpan2.textContent = score2;
+      timeSpan2.textContent = timeLeft2;
+      balloonStartBtn.disabled = true;
+      balloonArea.innerHTML = '';
+
+      // Countdown
+      gameInterval2 = setInterval(() => {
+        timeLeft2--;
+        timeSpan2.textContent = timeLeft2;
+        if (timeLeft2 <= 0) {
+          endBalloonGame();
+          showBalloonResults();
+        }
+      }, 1000);
+
+      // Spawn balloons every 800ms
+      spawnInterval2 = setInterval(spawnBalloon, 800);
+    }
+
+    function endBalloonGame () {
+      clearInterval(gameInterval2);
+      clearInterval(spawnInterval2);
+      balloonStartBtn.disabled = false;
+    }
+
+    function showBalloonResults () {
+      alert(`Time's up! You popped ${score2} Pokémon balloons!`);
+    }
+
+    function randomPositionWhack () {
+      const x = Math.random() * (whackArea.clientWidth - 60);
+      const y = Math.random() * (whackArea.clientHeight - 60);
+      return { x, y };
+    }
+
+    function spawnDiglett () {
+      const dig = document.createElement('img');
+      dig.src = DIGLETT_SRC;
+      dig.classList.add('diglett');
+      const { x, y } = randomPositionWhack();
+      dig.style.left = x + 'px';
+      dig.style.top = y + 'px';
+
+      dig.addEventListener('click', () => {
+        score3++;
+        scoreSpan3.textContent = score3;
+        whackArea.removeChild(dig);
+      });
+
+      whackArea.appendChild(dig);
+
+      setTimeout(() => {
+        if (whackArea.contains(dig)) {
+          whackArea.removeChild(dig);
+        }
+      }, 900);
+    }
+
+    function startWhackGame () {
+      score3 = 0;
+      timeLeft3 = 30;
+      scoreSpan3.textContent = score3;
+      timeSpan3.textContent = timeLeft3;
+      whackStartBtn.disabled = true;
+      whackArea.innerHTML = '';
+
+      gameInterval3 = setInterval(() => {
+        timeLeft3--;
+        timeSpan3.textContent = timeLeft3;
+        if (timeLeft3 <= 0) {
+          endWhackGame();
+          alert(`Time's up! You whacked ${score3} Digletts!`);
+        }
+      }, 1000);
+
+      spawnInterval3 = setInterval(spawnDiglett, 700);
+    }
+
+    function endWhackGame () {
+      clearInterval(gameInterval3);
+      clearInterval(spawnInterval3);
+      whackStartBtn.disabled = false;
+    }
+
+    function switchGame (gameNumber) {
+      // Stop any running games
+      endGame();
+      endBalloonGame();
+      endWhackGame();
+
+      if (gameNumber === 1) {
+        pokemonGameDiv.style.display = 'block';
+        balloonGameDiv.style.display = 'none';
+        whackGameDiv.style.display = 'none';
+        pacGameDiv.style.display = 'none';
+        gameLabel.textContent = 'Pokémon';
+      } else if (gameNumber === 2) {
+        pokemonGameDiv.style.display = 'none';
+        balloonGameDiv.style.display = 'block';
+        whackGameDiv.style.display = 'none';
+        pacGameDiv.style.display = 'none';
+        gameLabel.textContent = 'Balloons';
+      } else if (gameNumber === 3) {
+        pokemonGameDiv.style.display = 'none';
+        balloonGameDiv.style.display = 'none';
+        whackGameDiv.style.display = 'block';
+        pacGameDiv.style.display = 'none';
+        gameLabel.textContent = 'Whack-a-Diglett';
+      } else {
+        // Pac-Pika
+        pokemonGameDiv.style.display = 'none';
+        balloonGameDiv.style.display = 'none';
+        whackGameDiv.style.display = 'none';
+        pacGameDiv.style.display = 'block';
+        gameLabel.textContent = 'Pac-Pika';
+      }
+      currentGame = gameNumber;
+    }
+
+    // Update difficulty label live
+    diffSlider.addEventListener('input', () => {
+      diffLabel.textContent = diffSlider.value;
+    });
+
+    startBtn.addEventListener('click', startGame);
+    balloonStartBtn.addEventListener('click', startBalloonGame);
+    gameSelector.addEventListener('input', () => {
+      switchGame(parseInt(gameSelector.value, 10));
+    });
+
+    // Pac game DOM
+    const pacCanvas = document.getElementById('pac-canvas');
+    const pacCtx = pacCanvas.getContext && pacCanvas.getContext('2d');
+    const pacStartBtn = document.getElementById('pac-start-btn');
+    const pacScoreSpan = document.getElementById('score4');
+    const pacTimeSpan = document.getElementById('time4');
+
+    // Pac game functions
+    function initDots() {
+      dots = [];
+      for (let y = 0; y < GRID_SIZE; y++) {
+        const row = [];
+        for (let x = 0; x < GRID_SIZE; x++) {
+          row.push(1); // dot present
+        }
+        dots.push(row);
+      }
+      // remove dot from starting position
+      dots[pacY][pacX] = 0;
+    }
+
+    function drawPacGame() {
+      if (!pacCtx) return;
+      pacCtx.clearRect(0, 0, pacCanvas.width, pacCanvas.height);
+
+      // draw dots
+      pacCtx.fillStyle = '#fff';
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          if (dots[y][x]) {
+            pacCtx.beginPath();
+            pacCtx.arc(x * CELL + CELL/2, y * CELL + CELL/2, 3, 0, Math.PI * 2);
+            pacCtx.fill();
+          }
+        }
+      }
+
+      // draw Pac-Pika (yellow)
+      pacCtx.fillStyle = '#ffeb3b';
+      pacCtx.beginPath();
+      pacCtx.arc(pacX * CELL + CELL/2, pacY * CELL + CELL/2, CELL/2 - 2, 0.25 * Math.PI, 1.25 * Math.PI);
+      pacCtx.lineTo(pacX * CELL + CELL/2, pacY * CELL + CELL/2);
+      pacCtx.fill();
+    }
+
+    function movePac(dx, dy) {
+      if (!pacRunning) return;
+      const newX = (pacX + dx + GRID_SIZE) % GRID_SIZE;
+      const newY = (pacY + dy + GRID_SIZE) % GRID_SIZE;
+      pacX = newX;
+      pacY = newY;
+      if (dots[pacY][pacX]) {
+        dots[pacY][pacX] = 0;
+        pacScore++;
+        pacScoreSpan.textContent = pacScore;
+      }
+      drawPacGame();
+    }
+
+    document.addEventListener('keydown', e => {
+      if (!pacRunning) return;
+      switch (e.key) {
+        case 'ArrowUp': movePac(0, -1); break;
+        case 'ArrowDown': movePac(0, 1); break;
+        case 'ArrowLeft': movePac(-1, 0); break;
+        case 'ArrowRight': movePac(1, 0); break;
+      }
+    });
+
+    function startPacGame() {
+      pacScore = 0;
+      pacTimeLeft = 60;
+      pacScoreSpan.textContent = pacScore;
+      pacTimeSpan.textContent = pacTimeLeft;
+      pacStartBtn.disabled = true;
+      pacRunning = true;
+      pacX = 10;
+      pacY = 10;
+      initDots();
+      drawPacGame();
+
+      pacLoop = setInterval(drawPacGame, 1000/30);
+      pacTimer = setInterval(() => {
+        pacTimeLeft--;
+        pacTimeSpan.textContent = pacTimeLeft;
+        if (pacTimeLeft <= 0) {
+          endPacGame();
+          alert(`Time's up! You ate ${pacScore} berries!`);
+        }
+      }, 1000);
+    }
+
+    function endPacGame() {
+      pacRunning = false;
+      clearInterval(pacLoop);
+      clearInterval(pacTimer);
+      pacStartBtn.disabled = false;
+    }
+
+    // Initialize
+    switchGame(1);
+  </script>
+</body>
+</html>
